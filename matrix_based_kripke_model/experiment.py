@@ -15,3 +15,7 @@ timeline = KripkeMatrix(valuation, access)
 timeline.print()
 
 timeline.show_knowledge()
+
+print(timeline.i_and(0, 2))
+print(timeline.i_or(0, 2))
+print(timeline.i_not(0))
