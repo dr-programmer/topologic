@@ -27,11 +27,56 @@ class KripkeMatrix:
         if(do_print): self._print(visibility, rows, columns)
         return visibility
 
+    def _and(self, *args) -> np.array:
+        return reduce(lambda x, y: x * y, args)
+
     def i_and(self, *args) -> np.array:
-        return reduce(lambda x, y: self.matrix[:,x] * self.matrix[:,y], args)
-    
+        return self._and(*[self.matrix[:, x] for x in args])
+
+    def _or(self, *args) -> np.array:
+        return reduce(lambda x, y: np.maximum(x, y), args)
+
     def i_or(self, *args) -> np.array:
-        return reduce(lambda x, y: np.maximum(self.matrix[:,x], self.matrix[:,y]), args)
-    
+        return self._or(*[self.matrix[:, x] for x in args])
+
+    def _not(self, arr) -> np.array:
+        return (arr == 0).astype(int)
+
     def i_not(self, var) -> np.array:
-        return ((self.access_matrix @ self.matrix)[:,var] == 0).astype(int)
+        return self._not((self.access_matrix @ self.matrix)[:, var])
+
+    def i_implies(self, cond, res) -> np.array:
+        # Compute (not cond) or res for each world
+        neg_cond = self._not(self.matrix[:, cond])
+        res_col = self.matrix[:, res]
+        implication = self._or(neg_cond, res_col)
+        # Aggregate what each world sees via accessibility
+        seen = self.access_matrix @ implication
+        # For each world, implication holds if all accessible worlds see True (1)
+        row_sums = self.access_matrix.sum(axis=1)
+        # If a world sees no worlds, treat as vacuously true
+        vacuously_true = (row_sums == 0)
+        holds = (seen == row_sums)
+        return np.where(vacuously_true, 1, holds.astype(int))
+
+    def i_square(self, var) -> np.array:
+        # □p: true in w iff p holds in all accessible worlds from w
+        prop_col = self.matrix[:, var]
+        # For each world, get the minimum (AND) over accessible worlds
+        seen = self.access_matrix @ prop_col
+        row_sums = self.access_matrix.sum(axis=1)
+        # If a world sees no worlds, □p is vacuously true
+        vacuously_true = (row_sums == 0)
+        holds = (seen == row_sums)
+        return np.where(vacuously_true, 1, holds.astype(int))
+
+    def i_diamond(self, var) -> np.array:
+        # ◇p: true in w iff p holds in at least one accessible world from w
+        prop_col = self.matrix[:, var]
+        # For each world, get the sum (OR) over accessible worlds
+        seen = self.access_matrix @ prop_col
+        # If a world sees no worlds, ◇p is vacuously false
+        row_sums = self.access_matrix.sum(axis=1)
+        vacuously_false = (row_sums == 0)
+        holds = (seen > 0)
+        return np.where(vacuously_false, 0, holds.astype(int))
