@@ -21,17 +21,37 @@ def eval_ast(ast, kripke_matrix, var_map):
         elif isinstance(ast, Not):
             res, matrix, var_map = _eval(ast.expr, matrix, var_map)
             # Add result as temp column
-            matrix, idx = add_temp_column(matrix, kripke_matrix._not(res))
+            matrix, idx_inner = add_temp_column(matrix, res)
+            temp_km = KripkeMatrix(
+                {f"w{i}": {f"v{j}": matrix[i, j] for j in range(matrix.shape[1])} for i in range(matrix.shape[0])},
+                kripke_matrix.access_matrix
+            )
+            res_not = temp_km.i_not(idx_inner)
+            matrix, idx = add_temp_column(matrix, res_not)
             return matrix[:, idx], matrix, {**var_map, f"_tmp{idx}": idx}
         elif isinstance(ast, And):
             left, matrix, var_map = _eval(ast.left, matrix, var_map)
             right, matrix, var_map = _eval(ast.right, matrix, var_map)
-            matrix, idx = add_temp_column(matrix, left * right)
+            matrix, idx_left = add_temp_column(matrix, left)
+            matrix, idx_right = add_temp_column(matrix, right)
+            temp_km = KripkeMatrix(
+                {f"w{i}": {f"v{j}": matrix[i, j] for j in range(matrix.shape[1])} for i in range(matrix.shape[0])},
+                kripke_matrix.access_matrix
+            )
+            res_and = temp_km.i_and(idx_left, idx_right)
+            matrix, idx = add_temp_column(matrix, res_and)
             return matrix[:, idx], matrix, {**var_map, f"_tmp{idx}": idx}
         elif isinstance(ast, Or):
             left, matrix, var_map = _eval(ast.left, matrix, var_map)
             right, matrix, var_map = _eval(ast.right, matrix, var_map)
-            matrix, idx = add_temp_column(matrix, np.maximum(left, right))
+            matrix, idx_left = add_temp_column(matrix, left)
+            matrix, idx_right = add_temp_column(matrix, right)
+            temp_km = KripkeMatrix(
+                {f"w{i}": {f"v{j}": matrix[i, j] for j in range(matrix.shape[1])} for i in range(matrix.shape[0])},
+                kripke_matrix.access_matrix
+            )
+            res_or = temp_km.i_or(idx_left, idx_right)
+            matrix, idx = add_temp_column(matrix, res_or)
             return matrix[:, idx], matrix, {**var_map, f"_tmp{idx}": idx}
         elif isinstance(ast, Implies):
             left, matrix, var_map = _eval(ast.left, matrix, var_map)

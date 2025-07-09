@@ -1,11 +1,11 @@
 worlds {
     w0: P=1, Q=0, R=1, S=0
     w1: P=0, Q=1, R=1, S=0
-    w2: P=1, Q=1, R=0, S=0
+    w2: P=1, Q=1, R=0, S=0, Z=1
 }
 access {
     w0: w0, w1, w2
     w1: w1, w2
     w2: w2
 }
-expr: #(P && @Q) -> !(R || S)
+expr: !R -> Z
