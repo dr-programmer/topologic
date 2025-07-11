@@ -1,5 +1,7 @@
 import re
 
+# Lines starting with '//' are comments and will be ignored in 'worlds' and 'access' blocks.
+# Inline '//' comments are also supported in those blocks. Do not use '//' in the expr: line.
 def parse_input(input_str):
     # Extract blocks
     worlds_block = re.search(r"worlds\s*{([^}]*)}", input_str, re.DOTALL)
@@ -13,7 +15,12 @@ def parse_input(input_str):
     worlds = {}
     var_names = set()
     for line in worlds_block.group(1).strip().splitlines():
-        if not line.strip():
+        line = line.strip()
+        if not line or line.startswith('//'):
+            continue
+        if '//' in line:
+            line = line.split('//', 1)[0].strip()
+        if not line:
             continue
         world, assigns = line.split(":")
         world = world.strip()
@@ -44,7 +51,12 @@ def parse_input(input_str):
     access = []
     access_dict = {}
     for line in access_block.group(1).strip().splitlines():
-        if not line.strip():
+        line = line.strip()
+        if not line or line.startswith('//'):
+            continue
+        if '//' in line:
+            line = line.split('//', 1)[0].strip()
+        if not line:
             continue
         world, targets = line.split(":")
         world = world.strip()
@@ -78,15 +90,16 @@ def parse_input(input_str):
 if __name__ == "__main__":
     input_str = '''
 worlds {
-    w0: P=1, Q=0, R=1
-    w1: P=0, Q=1, R=1
-    w2: P=1, Q=1, R=0
+    w0: P=1, Q=0, R=1   // world 0 values
+    w1: P=0, Q=1, R=1   // world 1 values
+    // w2: P=1, Q=1, R=0   (this world is commented out)
 }
 access {
     w0: w0, w1, w2
     w1: w1, w2
     w2: w2
 }
+// expr: #(P && @Q) -> !(R || S)
 expr: #(P && @Q) -> !(R || S)
 '''
     result = parse_input(input_str)
